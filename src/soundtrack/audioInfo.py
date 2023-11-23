@@ -10,7 +10,7 @@ import typing
 
 class AudioInfo:
     ID3_TAGS: dict[
-        str, dict[typing.Literal["tag", "class", "desc"], id3.Frame | str]
+        str, dict[typing.Literal["tag", "class", "desc"], typing.Type[id3.Frame] | str]
     ] = {
         "Picture": {"tag": "APIC", "class": id3.APIC},
         "Cover": {"tag": "APIC", "class": id3.APIC},
@@ -207,14 +207,22 @@ class AudioInfo:
     }
 
     def __init__(self, path: str) -> None:
+        """Audio info wrapper for easier and more standardized editing.
+
+        Args:
+            path (str): Path to audio file.
+        """
         self.path = path
 
         self.audio: mutagen.FileType | flac.FLAC = mutagen.File(self.path)
 
     @property
-    def type(
-        self,
-    ) -> typing.Literal["id3", "flac",]:
+    def type(self) -> typing.Literal["id3", "flac",]:
+        """Audio metadata type.
+
+        Returns:
+            Literal["id3", "flac"]: Audio type: "id3" (mp3, wav), "flac" (flac)
+        """
         if isinstance(self.tags, id3.ID3):
             return "id3"
         elif isinstance(self.tags, flac.VCFLACDict):
@@ -223,26 +231,60 @@ class AudioInfo:
         return None
 
     @property
-    def filename(self):
+    def filename(self) -> str:
+        """Audio filename
+
+        Returns:
+            str: audio filename
+        """
         if hasattr(self.audio, "filename"):
             return self.audio.filename
         else:
             return self.path
 
     @property
-    def tags(self) -> id3.ID3:
+    def tags(self) -> id3.ID3 | flac.VCFLACDict:
+        """Audio tags object created by `mutagen`
+
+        Returns:
+            id3.ID3 | flac.VCFLACDict: mutagen audio tags dict.
+        """
         return self.audio.tags
 
     def _get_flac_tag_id(self, tag: str) -> str:
+        """Get flac tag id. If it can't find the id for the tag name, it just returns the input.
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            str: tag id
+        """
         return self.FLAC_TAGS.get(tag.lower(), tag)
 
     def _get_id3_tag_id(self, tag: str) -> str:
+        """Get id3 tag id. If it can't find the id for the tag name, it just returns the input.
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            str: tag id
+        """
         result = self.ID3_TAGS.get(tag.lower(), None)
         if isinstance(result, dict):
             return result["tag"]
         return tag
 
     def get_tag_id(self, tag: str) -> str:
+        """Get audio tag id. If it can't find the id for the tag name, it just returns the input.
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            str: tag id
+        """
         if self.type == "id3":
             return self._get_id3_tag_id(tag)
         elif self.type == "flac":
@@ -250,7 +292,26 @@ class AudioInfo:
 
         return tag
 
-    def _get_id3_tag_info(self, tag: str) -> typing.Type[id3._frames.Frame]:
+    def _get_id3_tag_info(
+        self,
+        tag: str,
+    ) -> dict[typing.Literal["tag", "class", "desc"], typing.Type[id3.Frame] | str]:
+        """Get the id3 tag info.
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            dict[Literal["tag", "class", "desc"], Type[id3.Frame] | str]: id3 data
+        
+        ```python
+        {
+            "tag": str,
+            "class": Type[id3.Frame],
+            "desc": str, # (optional)
+        }
+        ```
+        """
         result = self.ID3_TAGS.get(tag.lower(), None)
         if isinstance(result, dict):
             return result
@@ -261,22 +322,59 @@ class AudioInfo:
             if value["tag"].upper() == real_tag.upper():
                 return value
 
-    def _get_id3_tag_class(self, tag: str) -> typing.Type[id3._frames.Frame]:
+    def _get_id3_tag_class(self, tag: str) -> typing.Type[id3.Frame]:
+        """Get id3 tag class.
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            Type[id3.Frame]: tag class
+        """
         info = self._get_id3_tag_info(tag)
         if not info:
             return
         return info["class"]
 
     def del_tag(self, tag: str):
-        return self.tags.delall(self.get_tag_id(tag))
+        """Delete the specified tag. Does not raise exception when tag doens't exist.
+
+        Args:
+            tag (str): tag name
+        """
+        if self.type == 'flac':
+            try:
+                del self.tags[self.get_tag_id(tag)]
+            except:
+                pass
+        elif self.type == 'id3':
+            return self.tags.delall(self.get_tag_id(tag))
 
     def _set_flac_tag(self, tag: str, value: str | int | float | list[str]):
+        """Set flac tag
+
+        Args:
+            tag (str): tag name
+            value (str | int | float | list[str]): value
+
+        Raises:
+            ValueError: cannot set flac tag {tag} to {value}
+        """
         try:
             self.tags[self.get_tag_id(tag)] = value
         except:
             raise ValueError(f"cannot set flac tag {tag} to {value}")
 
     def _set_id3_tag(self, tag: str, *args, **kwargs):
+        """Set id3 tag. Arguments are passed into the id3 Frame, so if you need specific arguments, you'll have to look it up yourself.
+
+        Args:
+            tag (str): tag name
+            *args (Any): id3.Frame arguments
+            **kwargs (Any): id3.Frame arguments
+        
+        usually the `text` argument is what's needed.
+        """
         try:
             tag_info = self._get_id3_tag_info(tag)
             desc = kwargs.get("desc", tag_info.get("desc", ""))
@@ -300,6 +398,16 @@ class AudioInfo:
                     )
 
     def set_tag(self, tag: str, *args, **kwargs):
+        """Set tag.
+        
+        Args:
+            tag (str): tag name
+
+        Raises:
+            ValueError: unknown file type
+
+        id3 tags can take specific arguments, but flac tags just take the first argument as it's value.
+        """
         if self.type == "id3":
             return self._set_id3_tag(tag, *args, **kwargs)
         elif self.type == "flac":
@@ -315,9 +423,25 @@ class AudioInfo:
         raise ValueError("unknown audio file type")
 
     def _get_flac_tag(self, tag: str) -> str | None:
+        """Get flac tag
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            str | None: tag value
+        """
         return self.tags.get(self._get_flac_tag_id(tag), [None])[0]
 
     def _get_id3_tag(self, tag: str) -> list[id3.Frame] | id3.Frame:
+        """Get id3 tag. This returns the id3.Frame object. If there are multiple id3 tags, it returns a list of all of them.
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            list[id3.Frame] | id3.Frame: list of all the id3 tags, or the only id3 tag.
+        """
         value = self.tags.getall(self.get_tag_id(tag))
 
         if len(value) == 1:
@@ -326,12 +450,28 @@ class AudioInfo:
         return value
 
     def get_tag(self, tag: str) -> list[id3.Frame] | id3.Frame | str:
+        """Get tag value. If it's an id3 tag, it returns the id3.Frame object (or list of all the tags with the tag name). If it's a flac, it just retuns the value (usually str).
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            list[id3.Frame] | id3.Frame | str: tag value
+        """
         if self.type == "id3":
             return self._get_id3_tag(tag)
         elif self.type == "flac":
             return self._get_flac_tag(tag)
 
-    def get_str_tag(self, tag: str):
+    def get_str_tag(self, tag: str) -> str:
+        """Get tag value as a string. If it's an id3 tag, it will try to get the text. This will also only get the first instance of a tag.
+
+        Args:
+            tag (str): tag name
+
+        Returns:
+            str: tag value.
+        """
         value = self.get_tag(tag)
 
         if isinstance(value, list):
@@ -349,16 +489,30 @@ class AudioInfo:
 
 
     def save(self, v2_version=4, *args, **kwargs):
+        """Save modified tags.
+
+        Args:
+            v2_version (int, optional): id3 v2_version. Will ignore if it's a flac file. Defaults to 4.
+            *args (Any): additional parameters to pass into the save function.
+            **kwargs (Any): additional parameters to pass into the save function.
+        """
         try:
             self.audio.save(v2_version=v2_version, *args, **kwargs)
         except:
             self.audio.save(*args, **kwargs)
 
     def clear(self):
+        """Clear all tags.
+        """
         self.audio.clear()
 
     @property
-    def track(self):
+    def track(self) -> float:
+        """Track number
+
+        Returns:
+            float: track number
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -387,6 +541,11 @@ class AudioInfo:
 
     @track.setter
     def track(self, track: int):
+        """Set track number.
+
+        Args:
+            track (int): Track number
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -396,7 +555,12 @@ class AudioInfo:
         self.set_tag("track", text=list(track))
 
     @property
-    def disk(self):
+    def disk(self) -> float:
+        """Disk number.
+
+        Returns:
+            float: disk number
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -425,6 +589,11 @@ class AudioInfo:
 
     @disk.setter
     def disk(self, disk: int):
+        """Set disk number.
+
+        Args:
+            disk (int): disk number
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -435,18 +604,46 @@ class AudioInfo:
 
     @property
     def disc(self):
+        """Disc number.
+
+        Returns:
+            float: disc number
+        
+        Alias for `self.disk`
+        """
         return self.disk
 
     @disc.setter
     def disc(self, disc):
+        """Set disc number.
+
+        Args:
+            disc (int): disc number
+        
+        Alias for `self.disk`
+        """
         self.disk = disc
 
     @property
     def cd(self):
+        """CD number.
+
+        Returns:
+            float: CD number
+            
+        Alias for `self.disk`
+        """
         return self.disk
 
     @cd.setter
     def cd(self, disk: int):
+        """Set CD number.
+
+        Args:
+            cd (int): CD number
+        
+        Alias for `self.disk`
+        """
         self.disk = disk
 
     @property
