@@ -1,7 +1,5 @@
 
 import logging
-import sys
-import argparse
 import os
 import pathlib
 import io
@@ -32,6 +30,50 @@ class Soundtrack:
         spreadsheet: str = None,
         clear: bool = False,
     ) -> None:
+        """Auto tag all audio files in the input folder to create a soundtrack. It searches through subdirectories. If any value is `None` it will not modify that tag.
+
+        Args:
+            folder (str): Input folder. Note: it searches through subdirectories.
+            output (str, optional): New output folder. This is used when you don't want to modify the original files. Defaults to None.
+            album (str, optional): Album name. Defaults to None.
+            title (str, optional): Title. Can be regex that searches the filename. Defaults to None.
+            track (str, optional): Track number. Can be regex that searches the filename. Defaults to None.
+            artist (str, optional): Artist. Defaults to None.
+            band (str, optional): Band or album artist. Defaults to None.
+            publisher (str, optional): Publisher or organization. Defaults to None.
+            genre (str | list[str], optional): Genre. Can be list of genres. Defaults to None.
+            disc (int | str, optional): Disc. Can be regex that searches the filename. Defaults to None.
+            cover_art (str | Image.Image, optional): Cover art. Can be path to file, or PIL.Image.Image. Defaults to None.
+            spreadsheet (str, optional): Metadata csv spreadsheet. Defaults to None.
+            clear (bool, optional): Clear metadata before applying new metadata. Defaults to False.
+            
+        The spreadsheet is a csv file, formatted with the `,` separator, and each line is a different track. Values can be surrounded by spaces, the script trims spaces off before using the values.
+        
+        The first column is used to check what file to put the rest of the metadata on.
+        
+        ```csv
+        filename   , artist  , disc
+        track 1.mp3, artist 1, 1
+        track 2    , artist 2, 2
+        ```
+        The first row matches the file 'track 1.mp3' and adds the tags `{'artist':'artist 1', 'disc':'1'}`
+        
+        The second row matches the file 'track 2.wav' and adds the tags `{'artist':'artist 2', 'disc':'2'}`
+        
+        
+        The first column matching is case insensitive, and if the column is `filename`, the extension may be omitted to match files of the same name, but different formats.
+        
+        
+        You can also set the first column to be a tag, so you can match track names instead.
+        ```csv
+        title, composer, track
+        title 1, composer 1, 1
+        title 2, composer 2, 2
+        ```
+        The first row matches a track with the title `title 1` and adds the metadata `{'composer':'composer 1', 'track': 1}`
+        
+        The metadata in the spreadsheet is set after all the other metadata, so track titles can be grabbed from the filename using regex, then metadata can be added from the spreadsheet using the title for the match.
+        """
         self.path = folder
         self.output = output
         self.album = album
@@ -45,7 +87,7 @@ class Soundtrack:
 
         self.cover_art = cover_art
         
-        self.spreadsheet = []
+        self.spreadsheet: list[dict[str,str]] = []
         self.spreadsheet_filename = spreadsheet
         self.clear = clear
 
@@ -56,14 +98,24 @@ class Soundtrack:
         self.get_files()
         
     def read_spreadsheet(self):
+        """Read the spreadsheet
+        """
         if not isinstance(self.spreadsheet_filename, (str)):
-            return None
+            return
         
         with open(self.spreadsheet_filename, newline = '', mode = 'r') as file:
             reader = csv.DictReader(file)
             self.spreadsheet = list(reader)
     
-    def get_track_csv_metadata(self, track: AudioInfo):
+    def get_track_csv_metadata(self, track: AudioInfo) -> dict[str,str] | None:
+        """Get the metadata for the track from the csv spreadsheet
+
+        Args:
+            track (AudioInfo): `AudioInfo` track
+
+        Returns:
+            dict[str,str]: metadata
+        """
         if self.spreadsheet == []:
             return
         
@@ -92,6 +144,11 @@ class Soundtrack:
         return result
     
     def write_track_csv_metadata(self, track: AudioInfo):
+        """Write the metadata from the spreadsheet to the track.
+
+        Args:
+            track (AudioInfo): `AudioInfo` object.
+        """
         if self.spreadsheet == []:
             return
         
@@ -116,6 +173,8 @@ class Soundtrack:
             track.set_tag(tag, value)
     
     def write_csv_metadata(self):
+        """Write the metadata from the spreadsheet to the tracks.
+        """
         if self.spreadsheet == []:
             return
         
@@ -124,6 +183,8 @@ class Soundtrack:
             self.write_track_csv_metadata(track)
 
     def write_tags(self):
+        """Write all the tags in the soundtrack.
+        """
         if self.clear:
             self.clear_tags()
         self.write_audio_titles()
@@ -137,10 +198,14 @@ class Soundtrack:
         self.write_csv_metadata()
     
     def clear_tags(self):
+        """Clear all the tags in all the audio files.
+        """
         for track in self.audio:
             track.clear()
 
     def get_files(self):
+        """Get all the audio files in the folder. This searches subdirectories.
+        """
         self.files = []
         self.audio: list[AudioInfo] = []
 
@@ -177,6 +242,8 @@ class Soundtrack:
             self.audio.append(audio)
 
     def write_audio_titles(self):
+        """Write track titles.
+        """
         for music in self.audio:
             if music == None:
                 continue
@@ -202,6 +269,8 @@ class Soundtrack:
                 music.track = track
 
     def write_audio_album(self):
+        """Write track album.
+        """
         if not isinstance(self.album, str):
             return
 
@@ -212,6 +281,8 @@ class Soundtrack:
             music.album = self.album
 
     def write_artist(self):
+        """Write artist to tracks.
+        """
         if not isinstance(self.artist, str):
             return
 
@@ -222,6 +293,8 @@ class Soundtrack:
             music.artist = self.artist
 
     def write_band(self):
+        """Write band or album artist to tracks.
+        """
         if not isinstance(self.band, str):
             return
 
@@ -232,6 +305,8 @@ class Soundtrack:
             music.band = self.band
 
     def write_publisher(self):
+        """Write publisher or organization to tracks.
+        """
         if not isinstance(self.publisher, str):
             return
 
@@ -242,6 +317,8 @@ class Soundtrack:
             music.publisher = self.publisher
 
     def write_genre(self):
+        """Write genre to tracks.
+        """
         if not isinstance(self.genre, (str, list, tuple, set)):
             return
 
@@ -255,6 +332,8 @@ class Soundtrack:
             music.genre = self.genre
 
     def write_cover_art(self):
+        """Write cover art to tracks.
+        """
         image = self.cover_art
 
         if not isinstance(image, (str, bytes, Image.Image)):
@@ -287,6 +366,8 @@ class Soundtrack:
             music.cover_art = data
 
     def write_disk(self):
+        """Write disk to tracks.
+        """
         if not isinstance(self.disk, (int, str)):
             return
 
@@ -307,6 +388,8 @@ class Soundtrack:
             music.disk = disk
 
     def save(self):
+        """Save all audio files.
+        """
         for track in self.audio:
             if track == None:
                 continue
