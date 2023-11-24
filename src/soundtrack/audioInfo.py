@@ -603,7 +603,7 @@ class AudioInfo:
         self.set_tag("disk", text=list(disk))
 
     @property
-    def disc(self):
+    def disc(self) -> float:
         """Disc number.
 
         Returns:
@@ -625,7 +625,7 @@ class AudioInfo:
         self.disk = disc
 
     @property
-    def cd(self):
+    def cd(self) -> float:
         """CD number.
 
         Returns:
@@ -647,7 +647,12 @@ class AudioInfo:
         self.disk = disk
 
     @property
-    def title(self):
+    def title(self) -> str:
+        """Track title
+
+        Returns:
+            str: track title
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -676,6 +681,11 @@ class AudioInfo:
 
     @title.setter
     def title(self, title: str):
+        """Track title
+
+        Args:
+            title (str): track title
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -685,7 +695,12 @@ class AudioInfo:
         self.set_tag("title", text=list(title))
 
     @property
-    def album(self):
+    def album(self) -> str:
+        """Album
+
+        Returns:
+            str: album
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -714,6 +729,11 @@ class AudioInfo:
 
     @album.setter
     def album(self, album: str):
+        """Album
+
+        Args:
+            album (str): album name
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -723,7 +743,12 @@ class AudioInfo:
         self.set_tag("album", text=list(album))
 
     @property
-    def publisher(self):
+    def publisher(self) -> str:
+        """Publisher or organization.
+
+        Returns:
+            str: publisher or organization
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -752,6 +777,11 @@ class AudioInfo:
 
     @publisher.setter
     def publisher(self, publisher: str):
+        """Publisher or organization
+
+        Args:
+            publisher (str): publisher
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -761,7 +791,12 @@ class AudioInfo:
         self.set_tag("publisher", text=list(publisher))
 
     @property
-    def artist(self):
+    def artist(self) -> str:
+        """Artist
+
+        Returns:
+            str: artist
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -790,6 +825,11 @@ class AudioInfo:
 
     @artist.setter
     def artist(self, artist: str):
+        """Artist
+
+        Args:
+            artist (str): artist
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -799,7 +839,12 @@ class AudioInfo:
         self.set_tag("artist", text=list(artist))
 
     @property
-    def band(self):
+    def band(self) -> str:
+        """Band or album artist
+
+        Returns:
+            str: band or album artist
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -828,6 +873,11 @@ class AudioInfo:
 
     @band.setter
     def band(self, band: str):
+        """Band or album artist
+
+        Args:
+            band (str): band or album artist
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -837,7 +887,12 @@ class AudioInfo:
         self.set_tag("band", text=list(band))
 
     @property
-    def genre(self):
+    def genre(self) -> str:
+        """Genre
+
+        Returns:
+            str: genre
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -866,6 +921,11 @@ class AudioInfo:
 
     @genre.setter
     def genre(self, genre: str):
+        """Genre
+
+        Args:
+            genre (str): genre
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
@@ -875,7 +935,12 @@ class AudioInfo:
         self.set_tag("genre", text=list(genre))
 
     @property
-    def cover_art(self):
+    def cover_art(self) -> Image.Image:
+        """Cover art
+
+        Returns:
+            PIL.Image.Image: Cover art as a PIL.Image.Image object
+        """
         if not isinstance(self.audio, mutagen.FileType):
             return
 
