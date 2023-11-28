@@ -3,7 +3,14 @@ Python scripts for creating a soundtrack. Can also be used to create a soundtrac
 
 Despite the fact that this repo is called `python-soundtrack-creator`, the actual module is called `soundtrack`.
 
-## Getting started
+- [soundtrack-creator](#soundtrack-creator)
+  - [Installation](#installation)
+    - [ffmpeg](#ffmpeg)
+  - [Getting started](#getting-started)
+
+
+## Installation
+This will only work on python versions >=3.8 <3.12 (`numba` doesn't support 3.12 yet).
 
 Clone the repository
 ```shell
@@ -15,6 +22,44 @@ Install the dependencies
 ```shell
 pip install -r requirements.txt
 ```
+
+### ffmpeg
+
+You will also need ffmpeg, which can be installed with your favorite package manager.
+
+
+If you are using Anaconda, install *ffmpeg* by calling
+
+```
+conda install -c conda-forge ffmpeg
+```
+
+If you are not using Anaconda, here are some common commands for different operating systems:
+
+- ####  Linux (`apt-get`): 
+
+```
+apt-get install ffmpeg
+```
+or
+ 
+```
+apt-get install gstreamer1.0-plugins-base gstreamer1.0-plugins-ugly
+```
+- #### Linux (`yum`):
+```
+yum install ffmpeg
+```
+
+- #### Mac: 
+```
+brew install ffmpeg
+```
+
+- #### Windows: 
+
+download ffmpeg binaries from this [gyan.dev](https://www.gyan.dev/ffmpeg/builds/)
+## Getting started
 
 Now you can run
 ```shell
