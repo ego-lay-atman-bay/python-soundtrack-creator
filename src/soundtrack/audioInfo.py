@@ -1,5 +1,5 @@
 import mutagen
-from mutagen import flac, id3
+from mutagen import flac, id3, wave
 from PIL import Image
 from filetype import filetype
 
@@ -223,7 +223,7 @@ class AudioInfo:
         Returns:
             Literal["id3", "flac"]: Audio type: "id3" (mp3, wav), "flac" (flac)
         """
-        if isinstance(self.tags, id3.ID3):
+        if isinstance(self.tags, (id3.ID3, wave._WaveID3)):
             return "id3"
         elif isinstance(self.tags, flac.VCFLACDict):
             return "flac"
@@ -249,6 +249,8 @@ class AudioInfo:
         Returns:
             id3.ID3 | flac.VCFLACDict: mutagen audio tags dict.
         """
+        if self.audio.tags == None:
+            self.audio.add_tags()
         return self.audio.tags
 
     def _get_flac_tag_id(self, tag: str) -> str:
