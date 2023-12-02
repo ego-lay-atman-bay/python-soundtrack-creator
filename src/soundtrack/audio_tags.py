@@ -20,6 +20,9 @@ class AudioTags(dict):
         
         if file:
             audio = mutagen.File(file)
+            if audio == None:
+                return
+            
             self.filename = audio.filename
             if isinstance(audio.tags, id3.ID3):
                 audio.tags.update_to_v24()
