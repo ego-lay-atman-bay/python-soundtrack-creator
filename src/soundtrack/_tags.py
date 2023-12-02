@@ -623,7 +623,7 @@ def _set_id3_tag(tags: id3.ID3, tag: str, value: str = None, **kwargs):
     if isinstance(info, dict):
         id = info["id"]
 
-        if value:
+        if value != None:
             if "default" in info:
                 if info["default"] not in kwargs:
                     kwargs[info["default"]] = value
@@ -636,6 +636,9 @@ def _set_id3_tag(tags: id3.ID3, tag: str, value: str = None, **kwargs):
     else:
         if value and "text" not in kwargs:
             kwargs["text"] = value
+    
+    if 'text' in kwargs and not isinstance(kwargs["text"], (list, tuple, dict, set, slice)):
+        kwargs["text"] = str(kwargs["text"])
 
     if id not in ID3_FRAMES:
         id = f"TXXX:{id}"
@@ -662,6 +665,11 @@ def _set_id3_tag(tags: id3.ID3, tag: str, value: str = None, **kwargs):
 
 def _set_flac_tag(tags: flac.VCFLACDict, tag: str, value: str):
     id = get_tag_id("flac", id)
+    
+    if not isinstance(value, (list, tuple, dict, set, slice)):
+        value = str(value)
+
+    tags.__setitem__
 
     tags[id] = value
 
