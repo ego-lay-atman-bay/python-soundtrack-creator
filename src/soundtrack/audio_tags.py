@@ -56,7 +56,7 @@ class AudioTags(dict):
 
         audio.save(file)
 
-    def __setitem__(self, key: str, value: str | list | dict) -> None:
+    def __setitem__(self, key: str, value: str | list) -> None:
         if not isinstance(key, str):
             raise TypeError('key must be str')
 
@@ -68,6 +68,9 @@ class AudioTags(dict):
             return
 
         return super().__setitem__(key, value)
+    
+    def set(self, key: str, value: str | list) -> None:
+        return self.__setitem__(key, value)
 
     def __getitem__(self, key: str) -> str | list:
         if not isinstance(key, str):
