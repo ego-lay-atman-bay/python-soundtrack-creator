@@ -113,8 +113,16 @@ class AudioInfo:
         "source": {"tag": "TXXX", "class": id3.TXXX, "desc": "SOURCE"},
         "encoded by": {"tag": "TXXX", "class": id3.TXXX, "desc": "ENCODED BY"},
         "encoder": {"tag": "TXXX", "class": id3.TXXX, "desc": "ENCODED BY"},
-        "encoder settings": {"tag": "TXXX", "class": id3.TXXX, "desc": "ENCODER SETTINGS"},
-        "encoder settings": {"tag": "TXXX", "class": id3.TXXX, "desc": "ENCODER SETTINGS"},
+        "encoder settings": {
+            "tag": "TXXX",
+            "class": id3.TXXX,
+            "desc": "ENCODER SETTINGS",
+        },
+        "encoder settings": {
+            "tag": "TXXX",
+            "class": id3.TXXX,
+            "desc": "ENCODER SETTINGS",
+        },
     }
 
     ID3_TAGS = {k.lower(): v for k, v in ID3_TAGS.items()}
@@ -206,18 +214,20 @@ class AudioInfo:
         "wwwradio": "wwwradio",
     }
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, file: str) -> None:
         """Audio info wrapper for easier and more standardized editing.
 
         Args:
             path (str): Path to audio file.
         """
-        self.path = path
+        self.file = file
 
-        self.audio: mutagen.FileType | flac.FLAC = mutagen.File(self.path)
+        self.audio: mutagen.FileType | flac.FLAC = mutagen.File(self.file)
 
     @property
-    def type(self) -> typing.Literal["id3", "flac",]:
+    def type(
+        self,
+    ) -> typing.Literal["id3", "flac",]:
         """Audio metadata type.
 
         Returns:
@@ -240,15 +250,17 @@ class AudioInfo:
         if hasattr(self.audio, "filename"):
             return self.audio.filename
         else:
-            return self.path
+            return self.file
 
     @property
-    def tags(self) -> id3.ID3 | flac.VCFLACDict:
+    def tags(self) -> id3.ID3 | flac.VCFLACDict | None:
         """Audio tags object created by `mutagen`
 
         Returns:
             id3.ID3 | flac.VCFLACDict: mutagen audio tags dict.
         """
+        if self.audio == None:
+            return
         if self.audio.tags == None:
             self.audio.add_tags()
         return self.audio.tags
@@ -305,7 +317,7 @@ class AudioInfo:
 
         Returns:
             dict[Literal["tag", "class", "desc"], Type[id3.Frame] | str]: id3 data
-        
+
         ```python
         {
             "tag": str,
@@ -344,12 +356,12 @@ class AudioInfo:
         Args:
             tag (str): tag name
         """
-        if self.type == 'flac':
+        if self.type == "flac":
             try:
                 del self.tags[self.get_tag_id(tag)]
             except:
                 pass
-        elif self.type == 'id3':
+        elif self.type == "id3":
             return self.tags.delall(self.get_tag_id(tag))
 
     def _set_flac_tag(self, tag: str, value: str | int | float | list[str]):
@@ -374,7 +386,7 @@ class AudioInfo:
             tag (str): tag name
             *args (Any): id3.Frame arguments
             **kwargs (Any): id3.Frame arguments
-        
+
         usually the `text` argument is what's needed.
         """
         try:
@@ -388,20 +400,16 @@ class AudioInfo:
             if not class_:
                 return
             try:
-                self.tags[self.get_tag_id(tag)] = class_(
-                    *args, **kwargs
-                )
+                self.tags[self.get_tag_id(tag)] = class_(*args, **kwargs)
             except:
-                if not 'text' in kwargs:
-                    kwargs['text'] = args[0]
+                if not "text" in kwargs:
+                    kwargs["text"] = args[0]
                     args = args[1:]
-                    self.tags[self.get_tag_id(tag)] = class_(
-                        *args, **kwargs
-                    )
+                    self.tags[self.get_tag_id(tag)] = class_(*args, **kwargs)
 
     def set_tag(self, tag: str, *args, **kwargs):
         """Set tag.
-        
+
         Args:
             tag (str): tag name
 
@@ -451,7 +459,7 @@ class AudioInfo:
 
         return value
 
-    def get_tag(self, tag: str) -> list[id3.Frame] | id3.Frame | str:
+    def get_raw_tag(self, tag: str) -> list[id3.Frame] | id3.Frame | str:
         """Get tag value. If it's an id3 tag, it returns the id3.Frame object (or list of all the tags with the tag name). If it's a flac, it just retuns the value (usually str).
 
         Args:
@@ -465,7 +473,7 @@ class AudioInfo:
         elif self.type == "flac":
             return self._get_flac_tag(tag)
 
-    def get_str_tag(self, tag: str) -> str:
+    def get_tag(self, tag: str) -> str:
         """Get tag value as a string. If it's an id3 tag, it will try to get the text. This will also only get the first instance of a tag.
 
         Args:
@@ -474,7 +482,7 @@ class AudioInfo:
         Returns:
             str: tag value.
         """
-        value = self.get_tag(tag)
+        value = self.get_raw_tag(tag)
 
         if isinstance(value, list):
             if len(value) == 0:
@@ -489,8 +497,10 @@ class AudioInfo:
 
         return value
 
+    def convert_to(self, type: str = None):
+        pass
 
-    def save(self, v2_version=4, *args, **kwargs):
+    def save(self, file: str = None, *args, v2_version=4, **kwargs):
         """Save modified tags.
 
         Args:
@@ -499,13 +509,12 @@ class AudioInfo:
             **kwargs (Any): additional parameters to pass into the save function.
         """
         try:
-            self.audio.save(v2_version=v2_version, *args, **kwargs)
+            self.audio.save(file, v2_version=v2_version, *args, **kwargs)
         except:
-            self.audio.save(*args, **kwargs)
+            self.audio.save(file, *args, **kwargs)
 
     def clear(self):
-        """Clear all tags.
-        """
+        """Clear all tags."""
         self.audio.clear()
 
     @property
@@ -518,7 +527,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        track = self.get_tag("track")
+        track = self.get_raw_tag("track")
 
         if track == None:
             return
@@ -566,7 +575,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        disk = self.get_tag("disk")
+        disk = self.get_raw_tag("disk")
 
         if disk == None:
             return
@@ -610,7 +619,7 @@ class AudioInfo:
 
         Returns:
             float: disc number
-        
+
         Alias for `self.disk`
         """
         return self.disk
@@ -621,7 +630,7 @@ class AudioInfo:
 
         Args:
             disc (int): disc number
-        
+
         Alias for `self.disk`
         """
         self.disk = disc
@@ -632,7 +641,7 @@ class AudioInfo:
 
         Returns:
             float: CD number
-            
+
         Alias for `self.disk`
         """
         return self.disk
@@ -643,7 +652,7 @@ class AudioInfo:
 
         Args:
             cd (int): CD number
-        
+
         Alias for `self.disk`
         """
         self.disk = disk
@@ -658,7 +667,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        title = self.get_tag("title")
+        title = self.get_raw_tag("title")
 
         if title == None:
             return
@@ -706,7 +715,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        album = self.get_tag("album")
+        album = self.get_raw_tag("album")
 
         if album == None:
             return
@@ -754,7 +763,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        publisher = self.get_tag("publisher")
+        publisher = self.get_raw_tag("publisher")
 
         if publisher == None:
             return
@@ -802,7 +811,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        artist = self.get_tag("artist")
+        artist = self.get_raw_tag("artist")
 
         if artist == None:
             return
@@ -850,7 +859,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        band = self.get_tag("band")
+        band = self.get_raw_tag("band")
 
         if band == None:
             return
@@ -898,7 +907,7 @@ class AudioInfo:
         if not isinstance(self.audio, mutagen.FileType):
             return
 
-        genre = self.get_tag("genre")
+        genre = self.get_raw_tag("genre")
 
         if genre == None:
             return
@@ -947,7 +956,7 @@ class AudioInfo:
             return
 
         if self.type == "id3":
-            artwork = self.get_tag("picture")
+            artwork = self.get_raw_tag("picture")
             if isinstance(artwork, list):
                 if len(artwork) == 0:
                     return
