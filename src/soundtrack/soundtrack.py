@@ -10,7 +10,7 @@ from PIL import Image
 import csv
 
 
-from .audioInfo import AudioInfo
+from .audio_tags import AudioTags
 
 
 class Soundtrack:
@@ -86,13 +86,14 @@ class Soundtrack:
         self.disk = disc
 
         self.cover_art = cover_art
+        print(type(self.cover_art))
         
         self.spreadsheet: list[dict[str,str]] = []
         self.spreadsheet_filename = spreadsheet
         self.clear = clear
 
         self.files = []
-        self.audio: list[AudioInfo] = []
+        self.audio: list[AudioTags] = []
 
         self.read_spreadsheet()
         self.get_files()
@@ -107,11 +108,11 @@ class Soundtrack:
             reader = csv.DictReader(file)
             self.spreadsheet = list(reader)
     
-    def get_track_csv_metadata(self, track: AudioInfo) -> dict[str,str] | None:
+    def get_track_csv_metadata(self, track: AudioTags) -> dict[str,str] | None:
         """Get the metadata for the track from the csv spreadsheet
 
         Args:
-            track (AudioInfo): `AudioInfo` track
+            track (AudioTags): `AudioTags` track
 
         Returns:
             dict[str,str]: metadata
@@ -128,8 +129,11 @@ class Soundtrack:
                 return os.path.basename(track.filename).lower() == value.lower() or \
                         os.path.splitext(os.path.basename(track.filename))[0].lower() == value.lower()
             
-            tag_value = track.get_str_tag(reference.strip().lower())
-            # logging.info(f'tag: {reference.strip().lower()}\ntag_value: {tag_value}\nvalue: {value}')
+            tag_value = track.get(reference.strip().lower())
+#             logging.info(f"""track: {track}
+# tag: '{reference.strip().lower()}'
+# tag_value: '{tag_value}'
+# value: '{value}'""")
             if tag_value == None:
                 return
             
@@ -143,11 +147,11 @@ class Soundtrack:
         
         return result
     
-    def write_track_csv_metadata(self, track: AudioInfo):
+    def write_track_csv_metadata(self, track: AudioTags):
         """Write the metadata from the spreadsheet to the track.
 
         Args:
-            track (AudioInfo): `AudioInfo` object.
+            track (AudioTags): `AudioTags` object.
         """
         if self.spreadsheet == []:
             return
@@ -170,7 +174,7 @@ class Soundtrack:
             
             logging.info(f'setting tag {tag} to {value}')
             
-            track.set_tag(tag, value)
+            track.set(tag, value)
     
     def write_csv_metadata(self):
         """Write the metadata from the spreadsheet to the tracks.
@@ -207,7 +211,7 @@ class Soundtrack:
         """Get all the audio files in the folder. This searches subdirectories.
         """
         self.files = []
-        self.audio: list[AudioInfo] = []
+        self.audio: list[AudioTags] = []
 
         included_files = []
         
@@ -233,8 +237,8 @@ class Soundtrack:
         ]
 
         for file in files:
-            audio = AudioInfo(file.as_posix())
-            if audio.audio == None:
+            audio = AudioTags(file.as_posix())
+            if audio.filename == None:
                 continue
 
             self.files.append(file.as_posix())
@@ -256,7 +260,7 @@ class Soundtrack:
                 except:
                     title = self.title
                 logging.info(f"{title = }")
-                music.title = title
+                music.set('title', title)
 
             if self.track != None:
                 try:
@@ -266,7 +270,7 @@ class Soundtrack:
 
                 logging.info(f"{track = }")
 
-                music.track = track
+                music.set('track', track)
 
     def write_audio_album(self):
         """Write track album.
@@ -278,7 +282,7 @@ class Soundtrack:
             if music == None:
                 continue
 
-            music.album = self.album
+            music.set('album', self.album)
 
     def write_artist(self):
         """Write artist to tracks.
@@ -290,7 +294,7 @@ class Soundtrack:
             if music == None:
                 continue
 
-            music.artist = self.artist
+            music.set('artist', self.artist)
 
     def write_band(self):
         """Write band or album artist to tracks.
@@ -302,7 +306,7 @@ class Soundtrack:
             if music == None:
                 continue
 
-            music.band = self.band
+            music.set('band', self.band)
 
     def write_publisher(self):
         """Write publisher or organization to tracks.
@@ -314,7 +318,7 @@ class Soundtrack:
             if music == None:
                 continue
 
-            music.publisher = self.publisher
+            music.set('publisher', self.publisher)
 
     def write_genre(self):
         """Write genre to tracks.
@@ -329,41 +333,21 @@ class Soundtrack:
             if music == None:
                 continue
 
-            music.genre = self.genre
+            music.set('genres', self.genre)
 
     def write_cover_art(self):
         """Write cover art to tracks.
         """
         image = self.cover_art
-
-        if not isinstance(image, (str, bytes, Image.Image)):
+        
+        if image == None:
             return
-
-        mime = ""
-        data = b""
-
-        if isinstance(image, bytes):
-            mime = filetype.guess(image).mime
-
-        if isinstance(image, str):
-            with open(image, "rb") as file:
-                data = file.read()
-
-            mime = filetype.guess(data).mime
-
-        if isinstance(image, Image.Image):
-            file = io.BytesIO()
-
-            image.save(file, format="PNG")
-
-            data = file.getvalue()
-            mime = filetype.guess(data).mime
 
         for music in self.audio:
             if music == None:
                 continue
-
-            music.cover_art = data
+            
+            music.picture = self.cover_art
 
     def write_disk(self):
         """Write disk to tracks.
@@ -385,7 +369,7 @@ class Soundtrack:
             else:
                 disk = self.disk
 
-            music.disk = disk
+            music.set('disk', disk)
 
     def save(self):
         """Save all audio files.
