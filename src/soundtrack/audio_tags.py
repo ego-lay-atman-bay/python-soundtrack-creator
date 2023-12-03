@@ -2,6 +2,7 @@ from . import _tags
 
 
 import mutagen
+import PIL
 from PIL import Image
 from mutagen import id3
 
@@ -57,7 +58,11 @@ class AudioTags(dict):
 
         _tags.set_picture(audio, self.picture)
 
-        audio.save(file)
+        try:
+            audio.save(file, v2_version = 4)
+        except:
+            audio.save(file)
+            
 
     def __setitem__(self, key: str, value: str | list) -> None:
         if not isinstance(key, str):
@@ -125,15 +130,20 @@ class AudioTags(dict):
         return self._picture
     @picture.setter
     def picture(self, image: Image.Image | str | bytes | io.BytesIO | None):
-        if image == None:
+        try:
+            if image == None:
+                picture = None
+            elif isinstance(image, str) or (hasattr(image, 'read') and hasattr(image, 'seek') and hasattr(image, 'tell')):
+                picture = Image.open(image)
+            elif isinstance(image, bytes):
+                image = io.BytesIO(image)
+                image.seek(0)
+                picture = Image.open(image)
+            elif isinstance(image, Image.Image):
+                picture = image.copy()
+            else:
+                picture = None
+        except PIL.UnidentifiedImageError:
             picture = None
-        elif isinstance(image, str) or (hasattr(image, 'read') and hasattr(image, 'seek') and hasattr(image, 'tell')):
-            picture = Image.open(image)
-        elif isinstance(image, bytes):
-            picture = Image.open(io.BytesIO(image))
-        elif isinstance(image, Image.Image):
-            picture = image.copy()
-        else:
-            raise TypeError('could not load image')
 
         self._picture = picture
