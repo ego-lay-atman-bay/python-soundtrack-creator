@@ -18,6 +18,15 @@ class AudioTags(dict):
         self._picture: Image.Image = None
 
         self.filename = None
+        self.load(file)
+        
+    def load(self, file: str = None):
+        if file == None:
+            file = self.filename
+        
+        self.clear()
+        
+        self.filename = None
         
         if file:
             audio = mutagen.File(file)
