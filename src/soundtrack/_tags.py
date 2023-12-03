@@ -314,9 +314,9 @@ TAGS: list[
         "flac": "totaldiscs",
     },
     {
-        "name": ["tracks", "totaltracks"],
-        "id3": "TXXX:TOTALTRACKS",
-        "flac": "totaltracks",
+        "name": ["tracks", "tracktotal", "totaltracks"],
+        "id3": "TXXX:TRACKTOTAL",
+        "flac": "tracktotal",
     },
     {
         "name": ["accurateripdiscid"],
@@ -340,7 +340,6 @@ TAGS: list[
     {"name": ["mood"], "id3": "TMOO", "flac": "mood"},
     {"name": ["occasion"], "id3": "TXXX:OCCASION", "flac": "occasion"},
     {"name": ["keywords"], "id3": "TKWD", "flac": "keywords"},
-    {"name": ["tracktotal"], "id3": "TXXX:TRACKTOTAL", "flac": "tracktotal"},
     {
         "name": ["accurateripresult"],
         "id3": "TXXX:ACCURATERIPRESULT",
@@ -467,7 +466,7 @@ def _set_id3_picture(tags: id3.ID3, image: Image.Image):
     picture.seek(0)
     
     data = picture.getvalue()
-    mime = filetype.guess(data)
+    mime = filetype.guess(data).mime
     
     _set_id3_tag(
         tags,
@@ -486,12 +485,14 @@ def _set_flac_picture(audio: FileType, image: Image.Image):
         return
     
     picture = io.BytesIO()
-    image.save(image, format = 'JPEG')
+    image.save(picture, format = 'JPEG')
     
     picture.seek(0)
     
     data = picture.getvalue()
-    mime = filetype.guess(data)
+    mime = filetype.guess(data).mime
+    
+    
 
     picture = flac.Picture()
     picture.data = data
@@ -639,18 +640,20 @@ def _set_id3_tag(tags: id3.ID3, tag: str, value: str = None, **kwargs):
     
     if 'text' in kwargs and not isinstance(kwargs["text"], (list, tuple, dict, set, slice)):
         kwargs["text"] = str(kwargs["text"])
-
-    if id not in ID3_FRAMES:
-        id = f"TXXX:{id}"
+        
 
     split = id.split(":")
     id = split[0]
     desc = split[1] if len(split) > 1 else None
+    
+    if id not in ID3_FRAMES:
+        id = f"TXXX:{id}"
 
-    if "desc" in kwargs:
+    if "desc" in kwargs and desc != None:
         desc = f'{desc}:{kwargs["desc"]}'
 
-    kwargs["desc"] = desc
+    if desc != None:
+        kwargs["desc"] = desc
 
     frame = ID3_FRAMES[id]
     
@@ -664,7 +667,7 @@ def _set_id3_tag(tags: id3.ID3, tag: str, value: str = None, **kwargs):
 
 
 def _set_flac_tag(tags: flac.VCFLACDict, tag: str, value: str):
-    id = get_tag_id("flac", id)
+    id = get_tag_id("flac", tag)
     
     if not isinstance(value, (list, tuple, dict, set, slice)):
         value = str(value)
