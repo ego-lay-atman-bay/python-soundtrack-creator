@@ -64,7 +64,7 @@ download ffmpeg binaries from this [gyan.dev](https://www.gyan.dev/ffmpeg/builds
 Now you can run
 ```shell
 cd src
-python -m soundtrack -h
+python -m soundtrack tag -h
 ```
 
 The spreadsheet is a csv file, formatted with the `,` separator, and each line is a different track. Values can be surrounded by spaces, the script trims spaces off before using the values.
