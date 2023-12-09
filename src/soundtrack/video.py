@@ -9,7 +9,7 @@ import re
 import pydub
 from PIL import Image, ImageDraw, ImageFont
 
-from .audioInfo import AudioInfo
+from .audio_info import AudioInfo
 
 ffmpeg_log_filename = 'ffreport.log'
 
