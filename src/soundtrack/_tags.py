@@ -1,6 +1,6 @@
+import logging
 import io
 import filetype
-import mutagen
 from mutagen import id3, flac, FileType
 import typing
 from typing import Literal, Type
@@ -389,7 +389,7 @@ __all__ = [
     "set_tag",
     "remove_tag",
     "set_picture",
-    "get_tag_name",
+    "get_tag_names",
     "get_tag_id",
     "get_tag_info",
 ]
@@ -556,14 +556,14 @@ def get_tag_id(type: Literal["id3", "flac"], tag: str):
         return id["id"]
     return id
 
-def get_tag_name(tag: str):
+def get_tag_names(tag: str) -> list[str]:
     split = tag.split(':')
     tag = split[0]
     desc = split[1] if len(split) > 1 else ''
     
     for tag_info in TAGS:
         if tag.lower() in tag_info["name"]:
-            return tag_info["name"][0]
+            return tag_info["name"]
         
         result = ''
         
@@ -579,14 +579,33 @@ def get_tag_name(tag: str):
             split = tag_name.split(':')
             tag_name = split[0]
             tag_desc = split[1] if len(split) > 1 else ''
+            
         
             if tag.lower() == tag_name.lower():
+#                 print(f"""tag: {tag}
+# desc: {desc}
+# tag_name: {tag_name}
+# tag_desc: {tag_desc}
+# """)
                 if desc == tag_desc:
-                    return tag_info["name"][0]
+                    # print(f'name: {tag_info["name"]}')
+                    return tag_info["name"]
 
-                result = tag_info["name"][0]
+                result = tag_info["name"]
+    
+    # print(f'result: {result}')
+    if tag.lower() == 'txxx':
+        # print(f'desc: {desc}')
+        if desc:
+            return desc
         
     return result if result else tag
+
+def get_tag_name(tag: str):
+    name = get_tag_names(tag)
+    if isinstance(name, list):
+        name = name[0]
+    return name
 
 def _get_id3_tag(tags: id3.ID3, tag: str):
     id = get_tag_info("id3", tag)
@@ -597,9 +616,17 @@ def _get_id3_tag(tags: id3.ID3, tag: str):
         id = id['id']
 
     value = None
+    
+    if id.split(':')[0].upper() not in ID3_FRAMES:
+        id = f'TXXX:{tag}'
 
-    if id.split(':')[0] in ID3_FRAMES:
-        values = tags.getall(id)
+    if id.split(':')[0].upper() in ID3_FRAMES:
+        values = []
+        for name in tags:
+            if name.lower() == id.lower():
+                values = [tags[name]]
+                break
+        
         if len(values) > 0:
             value = values[0]
     
@@ -672,7 +699,7 @@ def _set_flac_tag(tags: flac.VCFLACDict, tag: str, value: str):
     if not isinstance(value, (list, tuple, dict, set, slice)):
         value = str(value)
 
-    tags.__setitem__
+    logging.debug(f"tag: {tag}\nvalue: {value}")
 
     tags[id] = value
 

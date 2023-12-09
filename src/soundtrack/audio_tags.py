@@ -1,6 +1,7 @@
 from . import _tags
 
 
+import os
 import mutagen
 import PIL
 from PIL import Image
@@ -14,6 +15,7 @@ import typing
 class AudioTags(dict):
     def __init__(self, file: str = None) -> None:
         super().__init__()
+        self.base_path: str = '.'
 
         self._picture: Image.Image = None
 
@@ -51,7 +53,8 @@ class AudioTags(dict):
         if file == None and self.filename != None:
             file = self.filename
         else:
-            raise AttributeError('must provide file')
+            if file == None:
+                raise AttributeError('must provide file')
         
         audio: mutagen.FileType = mutagen.File(file)
         if isinstance(audio.tags, id3.ID3):
@@ -125,14 +128,45 @@ class AudioTags(dict):
 
         return super().pop(key, default)
 
-    def setdefault(self, key: str, default: str):
-        if not isinstance(key, str):
+    def setdefault(self, key: str, default: str = None):
+        if not isinstance(key, (str, dict, list)):
             raise TypeError('key must be str')
+        
+        if isinstance(key, dict):
+            for tag in key:
+                self.setdefault(tag, key[tag])
+            return
+        elif isinstance(key, list):
+            for tag in key:
+                self.setdefault(tag[0], tag[1])
+            return
 
         key = key.lower()
         key = _tags.get_tag_name(key)
+        
+        if key not in self:
+            self.__setitem__(key, default)
+        
+        return self.get(key)
 
-        return super().setdefault(key, default)
+    
+    def update(self, values: dict | typing.Iterable[tuple], **kwargs):
+        if isinstance(values, dict):
+            for key in values:
+                self.__setitem__(key, values[key])
+        elif isinstance(values, list):
+            for item in values:
+                self.__setitem__(item[0], item[1])
+        for key in kwargs:
+            self.__setitem__(key, kwargs[key])
+    
+    def expand(self):
+        tags = dict()
+        for tag in self:
+            for name in _tags.get_tag_names(tag):
+                tags[name] = self[tag]
+        
+        return tags
 
     @property
     def picture(self) -> Image.Image | None:
@@ -143,6 +177,8 @@ class AudioTags(dict):
             if image == None:
                 picture = None
             elif isinstance(image, str) or (hasattr(image, 'read') and hasattr(image, 'seek') and hasattr(image, 'tell')):
+                if isinstance(image, str):
+                    image = os.path.join(self.base_path, image)
                 picture = Image.open(image)
             elif isinstance(image, bytes):
                 image = io.BytesIO(image)
