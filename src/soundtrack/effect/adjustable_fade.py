@@ -1,3 +1,4 @@
+import logging
 import numpy
 
 from .effect import Effect
@@ -119,6 +120,8 @@ class AdjustableFade(Effect):
         power: float,
         env: numpy.ndarray[float],
     ) -> numpy.ndarray[float]:
-        return self.scale_curve(gain0, gain1,
+        value = self.scale_curve(gain0, gain1,
             (env if (power == 1) else numpy.exp(power * numpy.log(env))))
+        logging.debug(value)
+        return value
 

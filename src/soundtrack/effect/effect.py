@@ -11,7 +11,8 @@ class Effect:
         length: int = None,
         duration: float = None,
         sample_rate: int = None,
-        **options,
+        options: dict = {},
+        **kwargs,
     ) -> None:
         """Audio effect. This effect will last the specified length in samples. If the duration is specified (in seconds), then it will use that length. This will assume the sample rate is `4400`, unless specified.
 
@@ -38,6 +39,12 @@ class Effect:
         for option in self.OPTIONS:
             self.options[option] = self.OPTIONS[option]['default']
         
+        for option in kwargs:
+            if option in self.OPTIONS and 'type' in self.OPTIONS[option]:
+                self.options[option] = self.OPTIONS[option]['type'](kwargs[option])
+            else:
+                self.options[option] = kwargs[option]
+            
         for option in options:
             if option in self.OPTIONS and 'type' in self.OPTIONS[option]:
                 self.options[option] = self.OPTIONS[option]['type'](options[option])
