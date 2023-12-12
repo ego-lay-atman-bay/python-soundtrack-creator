@@ -1,11 +1,13 @@
 import logging
 import io
 import filetype
-from mutagen import id3, flac, FileType
+# import mimetypes # I'm gonna look into this
+import base64
+from mutagen import id3, flac, _vorbis, FileType
+from mutagen.flac import Picture
 import typing
 from typing import Literal, Type
 from PIL import Image
-
 
 ID3_FRAMES: dict[str, Type[id3._frames.Frame]] = {
     "AENC": id3.AENC,
@@ -191,7 +193,7 @@ TAGS: list[
         Literal[
             "name",
             "id3",
-            "flac",
+            "vorbis",
         ],
         list[str]
         | str
@@ -212,22 +214,22 @@ TAGS: list[
             "values": ["encoding", "mime", "type", "desc", "data"],
             "default": "data",
         },
-        "flac": None,
+        "vorbis": 'metadata_block_picture',
     },
-    {"name": ["comment"], "id3": "COMM", "flac": "comment"},
-    {"name": ["grouping", "contentgroup"], "id3": "TIT1", "flac": "contentgroup"},
-    {"name": ["arranger", "involvedpeople",], "id3": "TIPL", "flac": "arranger"},
-    {"name": ["musiccdidentifier"], "id3": "MCDI", "flac": "musiccdidentifier"},
-    {"name": ["movement", "movementnumber"], "id3": "MVIN", "flac": "movement"},
-    {"name": ["movementname"], "id3": "MVNM", "flac": "movementname"},
-    {"name": ["movementtotal"], "id3": "MVNM", "flac": "movementtotal"},
-    {"name": ["ownership"], "id3": "OWNE", "flac": "ownership"},
+    {"name": ["comment"], "id3": "COMM", "vorbis": "comment"},
+    {"name": ["grouping", "contentgroup"], "id3": "TIT1", "vorbis": "contentgroup"},
+    {"name": ["arranger", "involvedpeople",], "id3": "TIPL", "vorbis": "arranger"},
+    {"name": ["musiccdidentifier"], "id3": "MCDI", "vorbis": "musiccdidentifier"},
+    {"name": ["movement", "movementnumber"], "id3": "MVIN", "vorbis": "movement"},
+    {"name": ["movementname"], "id3": "MVNM", "vorbis": "movementname"},
+    {"name": ["movementtotal"], "id3": "MVNM", "vorbis": "movementtotal"},
+    {"name": ["ownership"], "id3": "OWNE", "vorbis": "ownership"},
     {
         "name": ["playcounter"],
         "id3": {"id": "PCNT", "values": ["count"], "default": "count"},
-        "flac": "playcounter",
+        "vorbis": "playcounter",
     },
-    {"name": ["podcast?", "podcast"], "id3": "PCST", "flac": "podcast"},
+    {"name": ["podcast?", "podcast"], "id3": "PCST", "vorbis": "podcast"},
     {
         "name": ["popularimeter"],
         "id3": {
@@ -235,151 +237,151 @@ TAGS: list[
             "values": ["email", "rating", "count"],
             "default": "rating",
         },
-        "flac": "rating:{email}",
+        "vorbis": "rating:{email}",
     },
-    {"name": ["private"], "id3": "PRIV", "flac": "private"},
-    {"name": ["album"], "id3": "TALB", "flac": "album"},
-    {"name": ["bpm", "beatsperminute"], "id3": "TBPM", "flac": "bpm"},
-    {"name": ["podcastcategory"], "id3": "TCAT", "flac": "podcastcategory"},
-    {"name": ["compilation"], "id3": "TCMP", "flac": "compilation"},
-    {"name": ["composer"], "id3": "TCOM", "flac": "composer"},
+    {"name": ["private"], "id3": "PRIV", "vorbis": "private"},
+    {"name": ["album"], "id3": "TALB", "vorbis": "album"},
+    {"name": ["bpm", "beatsperminute"], "id3": "TBPM", "vorbis": "bpm"},
+    {"name": ["podcastcategory"], "id3": "TCAT", "vorbis": "podcastcategory"},
+    {"name": ["compilation"], "id3": "TCMP", "vorbis": "compilation"},
+    {"name": ["composer"], "id3": "TCOM", "vorbis": "composer"},
     {
         "name": ["genres", "genre"],
         "id3": {"id": "TCON", "values": ["text", "genres"], "default": "genres"},
-        "flac": "genre",
+        "vorbis": "genre",
     },
-    {"name": ["copyright"], "id3": "TCOP", "flac": "copyright"},
-    {"name": ["date"], "id3": "TDAT", "flac": "date"},
-    {"name": ["year"], "id3": "TYER", "flac": "year"},
-    {"name": ["podcastdescription"], "id3": "TDES", "flac": "podcastdescription"},
-    {"name": ["playlistdelay"], "id3": "TDLY", "flac": "playlistdelay"},
-    {"name": ["encodedby"], "id3": "TENC", "flac": "encodedby"},
-    {"name": ["lyricist"], "id3": "TEXT", "flac": "lyricist"},
-    {"name": ["filetype"], "id3": "TFLT", "flac": "filetype"},
-    {"name": ["podcastid"], "id3": "TGID", "flac": "podcastid"},
-    {"name": ["time", "releasetime"], "id3": "TIME", "flac": "releasetime"},
-    {"name": ["title"], "id3": "TIT2", "flac": "title"},
-    {"name": ["subtitle"], "id3": "TIT3", "flac": "subtitle"},
-    {"name": ["initialkey"], "id3": "TKEY", "flac": "key"},
-    {"name": ["podcastkeywords"], "id3": "TKWD", "flac": "podcastkeywords"},
-    {"name": ["language"], "id3": "TLAN", "flac": "language"},
-    {"name": ["length"], "id3": "TLEN", "flac": "length"},
-    {"name": ["media"], "id3": "TMED", "flac": "media"},
-    {"name": ["originalalbum"], "id3": "TOAL", "flac": "originalalbum"},
-    {"name": ["origalbum"], "id3": "TOAL", "flac": "origalbum"},
-    {"name": ["originalfilename"], "id3": "TOFN", "flac": "originalfilename"},
-    {"name": ["originallyricist"], "id3": "TOLY", "flac": "originallyricist"},
-    {"name": ["originalartist"], "id3": "TOPE", "flac": "originalartist"},
-    {"name": ["origartist"], "id3": "TOPE", "flac": "origartist"},
-    {"name": ["originalreleaseyear"], "id3": "TDOR", "flac": "originaldate"},
-    {"name": ["fileowner"], "id3": "TOWN", "flac": "fileowner"},
-    {"name": ["artist"], "id3": "TPE1", "flac": "artist"},
-    {"name": ["band", "albumartist"], "id3": "TPE2", "flac": "albumartist"},
-    {"name": ["conductor"], "id3": "TPE3", "flac": "conductor"},
-    {"name": ["interpretedby", "remixer"], "id3": "TPE4", "flac": "REMIXER"},
+    {"name": ["copyright"], "id3": "TCOP", "vorbis": "copyright"},
+    {"name": ["date"], "id3": "TDAT", "vorbis": "date"},
+    {"name": ["year"], "id3": "TYER", "vorbis": "year"},
+    {"name": ["podcastdescription"], "id3": "TDES", "vorbis": "podcastdescription"},
+    {"name": ["playlistdelay"], "id3": "TDLY", "vorbis": "playlistdelay"},
+    {"name": ["encodedby"], "id3": "TENC", "vorbis": "encodedby"},
+    {"name": ["lyricist"], "id3": "TEXT", "vorbis": "lyricist"},
+    {"name": ["filetype"], "id3": "TFLT", "vorbis": "filetype"},
+    {"name": ["podcastid"], "id3": "TGID", "vorbis": "podcastid"},
+    {"name": ["time", "releasetime"], "id3": "TIME", "vorbis": "releasetime"},
+    {"name": ["title"], "id3": "TIT2", "vorbis": "title"},
+    {"name": ["subtitle"], "id3": "TIT3", "vorbis": "subtitle"},
+    {"name": ["initialkey"], "id3": "TKEY", "vorbis": "key"},
+    {"name": ["podcastkeywords"], "id3": "TKWD", "vorbis": "podcastkeywords"},
+    {"name": ["language"], "id3": "TLAN", "vorbis": "language"},
+    {"name": ["length"], "id3": "TLEN", "vorbis": "length"},
+    {"name": ["media"], "id3": "TMED", "vorbis": "media"},
+    {"name": ["originalalbum"], "id3": "TOAL", "vorbis": "originalalbum"},
+    {"name": ["origalbum"], "id3": "TOAL", "vorbis": "origalbum"},
+    {"name": ["originalfilename"], "id3": "TOFN", "vorbis": "originalfilename"},
+    {"name": ["originallyricist"], "id3": "TOLY", "vorbis": "originallyricist"},
+    {"name": ["originalartist"], "id3": "TOPE", "vorbis": "originalartist"},
+    {"name": ["origartist"], "id3": "TOPE", "vorbis": "origartist"},
+    {"name": ["originalreleaseyear"], "id3": "TDOR", "vorbis": "originaldate"},
+    {"name": ["fileowner"], "id3": "TOWN", "vorbis": "fileowner"},
+    {"name": ["artist"], "id3": "TPE1", "vorbis": "artist"},
+    {"name": ["band", "albumartist"], "id3": "TPE2", "vorbis": "albumartist"},
+    {"name": ["conductor"], "id3": "TPE3", "vorbis": "conductor"},
+    {"name": ["interpretedby", "remixer"], "id3": "TPE4", "vorbis": "REMIXER"},
     {
         "name": ["disc", "disk", "cd", "discnumber", "disknumber", "partofset"],
         "id3": "TPOS",
-        "flac": "discnumber",
+        "vorbis": "discnumber",
     },
-    {"name": ["publisher", "organization"], "id3": "TPUB", "flac": "organization"},
-    {"name": ["track", "tracknumber"], "id3": "TRCK", "flac": "tracknumber"},
-    {"name": ["recordingdates"], "id3": "TRDA", "flac": "date"},
-    {"name": ["recordingtime"], "id3": "TDRC", "flac": "time"},
-    {"name": ["size"], "id3": "TSIZ", "flac": "size"},
-    {"name": ["isrc"], "id3": "TSRC", "flac": "isrc"},
+    {"name": ["publisher", "organization"], "id3": "TPUB", "vorbis": "organization"},
+    {"name": ["track", "tracknumber"], "id3": "TRCK", "vorbis": "tracknumber"},
+    {"name": ["recordingdates"], "id3": "TRDA", "vorbis": "date"},
+    {"name": ["recordingtime"], "id3": "TDRC", "vorbis": "time"},
+    {"name": ["size"], "id3": "TSIZ", "vorbis": "size"},
+    {"name": ["isrc"], "id3": "TSRC", "vorbis": "isrc"},
     {
         "name": ["encodersettings"],
         "id3": "TSSE",
-        "flac": "encodersettings",
+        "vorbis": "encodersettings",
     },
-    {"name": ["termsofuse"], "id3": "USER", "flac": "termsofuse"},
-    {"name": ["commercialurl"], "id3": "WCOM", "flac": "commercialurl"},
-    {"name": ["copyrighturl", "license"], "id3": "WCOP", "flac": "license"},
-    {"name": ["podcasturl"], "id3": "WFED", "flac": "podcasturl"},
-    {"name": ["fileurl"], "id3": "WOAF", "flac": "fileurl"},
-    {"name": ["artisturl"], "id3": "WOAR", "flac": "website"},
-    {"name": ["sourceurl"], "id3": "WOAS", "flac": "sourceurl"},
+    {"name": ["termsofuse"], "id3": "USER", "vorbis": "termsofuse"},
+    {"name": ["commercialurl"], "id3": "WCOM", "vorbis": "commercialurl"},
+    {"name": ["copyrighturl", "license"], "id3": "WCOP", "vorbis": "license"},
+    {"name": ["podcasturl"], "id3": "WFED", "vorbis": "podcasturl"},
+    {"name": ["fileurl"], "id3": "WOAF", "vorbis": "fileurl"},
+    {"name": ["artisturl"], "id3": "WOAR", "vorbis": "website"},
+    {"name": ["sourceurl"], "id3": "WOAS", "vorbis": "sourceurl"},
     {
         "name": ["internetradiostationurl"],
         "id3": "WORS",
-        "flac": "internetradiostationurl",
+        "vorbis": "internetradiostationurl",
     },
-    {"name": ["paymenturl"], "id3": "WPAY", "flac": "paymenturl"},
-    {"name": ["publisherurl"], "id3": "WPUB", "flac": "publisherurl"},
-    {"name": ["userdefinedurl"], "id3": "WXXX", "flac": "userdefinedurl"},
+    {"name": ["paymenturl"], "id3": "WPAY", "vorbis": "paymenturl"},
+    {"name": ["publisherurl"], "id3": "WPUB", "vorbis": "publisherurl"},
+    {"name": ["userdefinedurl"], "id3": "WXXX", "vorbis": "userdefinedurl"},
     {
         "name": ["discs", "disks", "totaldiscs", "totaldisks"],
         "id3": "TXXX:TOTALDISCS",
-        "flac": "totaldiscs",
+        "vorbis": "totaldiscs",
     },
     {
         "name": ["tracks", "tracktotal", "totaltracks"],
         "id3": "TXXX:TRACKTOTAL",
-        "flac": "tracktotal",
+        "vorbis": "tracktotal",
     },
     {
         "name": ["accurateripdiscid"],
         "id3": "TXXX:ACCURATERIPDISCID",
-        "flac": "accurateripdiscid",
+        "vorbis": "accurateripdiscid",
     },
-    {"name": ["source"], "id3": "WOAS", "flac": "source"},
-    {"name": ["encodedby"], "id3": "TENC", "flac": "encoded by"},
-    {"name": ["encoder"], "id3": "TENC", "flac": "encoder"},
+    {"name": ["source"], "id3": "WOAS", "vorbis": "source"},
+    {"name": ["encodedby"], "id3": "TENC", "vorbis": "encoded by"},
+    {"name": ["encoder"], "id3": "TENC", "vorbis": "encoder"},
     {
         "name": ["lyrics", "syncedlyrics", "synlyrics"],
         "id3": "SYLT",
-        "flac": "lyrics",
+        "vorbis": "lyrics",
     },
     {
         "name": ["unsyncedlyrics"],
         "id3": "USLT",
-        "flac": "unsyncedlyrics",
+        "vorbis": "unsyncedlyrics",
     },
-    {"name": ["tempo"], "id3": "TBPM", "flac": "tempo"},
-    {"name": ["mood"], "id3": "TMOO", "flac": "mood"},
-    {"name": ["occasion"], "id3": "TXXX:OCCASION", "flac": "occasion"},
-    {"name": ["keywords"], "id3": "TKWD", "flac": "keywords"},
+    {"name": ["tempo"], "id3": "TBPM", "vorbis": "tempo"},
+    {"name": ["mood"], "id3": "TMOO", "vorbis": "mood"},
+    {"name": ["occasion"], "id3": "TXXX:OCCASION", "vorbis": "occasion"},
+    {"name": ["keywords"], "id3": "TKWD", "vorbis": "keywords"},
     {
         "name": ["accurateripresult"],
         "id3": "TXXX:ACCURATERIPRESULT",
-        "flac": "accurateripresult",
+        "vorbis": "accurateripresult",
     },
     {
         "name": ["albumartistsortorder", "albumartistsort"],
         "id3": "TSO2",
-        "flac": "albumartistsort",
+        "vorbis": "albumartistsort",
     },
-    {"name": ["albumsort"], "id3": "TSOA", "flac": "albumsort"},
+    {"name": ["albumsort"], "id3": "TSOA", "vorbis": "albumsort"},
     {
         "name": ["composersortorder", "composersort"],
         "id3": "TSOC",
-        "flac": "composersort",
+        "vorbis": "composersort",
     },
-    {"name": ["encodingtime"], "id3": "TDEN", "flac": "encodingtime"},
-    {"name": ["involvedpeoplelist"], "id3": "TIPL", "flac": "involvedpeoplelist"},
-    {"name": ["location"], "id3": "TXXX:LOCATION", "flac": "location"},
-    {"name": ["sourcemedium"], "id3": "TXXX:SOURCEMEDIUM", "flac": "sourcemedium"},
+    {"name": ["encodingtime"], "id3": "TDEN", "vorbis": "encodingtime"},
+    {"name": ["involvedpeoplelist"], "id3": "TIPL", "vorbis": "involvedpeoplelist"},
+    {"name": ["location"], "id3": "TXXX:LOCATION", "vorbis": "location"},
+    {"name": ["sourcemedium"], "id3": "TXXX:SOURCEMEDIUM", "vorbis": "sourcemedium"},
     {
         "name": ["musiciancreditslist"],
         "id3": "TXXX:MUSICIANCREDITSLIST",
-        "flac": "musiciancreditslist",
+        "vorbis": "musiciancreditslist",
     },
-    {"name": ["userdefinedtext"], "id3": "TXXX", "flac": "comment"},
+    {"name": ["userdefinedtext"], "id3": "TXXX", "vorbis": "comment"},
     {
         "name": ["internetradiostationname", "netradiostation"],
         "id3": "TRSN",
-        "flac": "netradiostation",
+        "vorbis": "netradiostation",
     },
     {
         "name": ["internetradiostationowner", "netradioowner"],
         "id3": "TRSO",
-        "flac": "netradioowner",
+        "vorbis": "netradioowner",
     },
-    {"name": ["subtitle", "setsubtitle"], "id3": "TSST", "flac": "setsubtitle"},
-    {"name": ["titlesort"], "id3": "TSOT", "flac": "titlesort"},
-    {"name": ["chapter"], "id3": "CHAP", "flac": "chapter"},
-    {"name": ["toc", "tableofcontents"], "id3": "CTOC", "flac": "tableofcontents"},
+    {"name": ["subtitle", "setsubtitle"], "id3": "TSST", "vorbis": "setsubtitle"},
+    {"name": ["titlesort"], "id3": "TSOT", "vorbis": "titlesort"},
+    {"name": ["chapter"], "id3": "CHAP", "vorbis": "chapter"},
+    {"name": ["toc", "tableofcontents"], "id3": "CTOC", "vorbis": "tableofcontents"},
 ]
 
 __all__ = [
@@ -404,8 +406,8 @@ def get_tag(audio: FileType, tag: str):
 
     if isinstance(audio.tags, id3.ID3):
         return _get_id3_tag(audio.tags, tag)
-    elif isinstance(audio.tags, flac.VCFLACDict):
-        return _get_flac_tag(audio.tags, tag)
+    elif isinstance(audio.tags, _vorbis.VCommentDict):
+        return _get_vorbis_tag(audio.tags, tag)
 
     raise NotImplementedError("audio type not supported")
 
@@ -419,10 +421,55 @@ def set_tag(audio: FileType, tag: str, value: str, **kwargs):
 
     if isinstance(audio.tags, id3.ID3):
         return _set_id3_tag(audio.tags, tag, value=value, **kwargs)
-    elif isinstance(audio.tags, flac.VCFLACDict):
-        return _set_flac_tag(audio.tags, tag, value=value)
+    elif isinstance(audio.tags, _vorbis.VCommentDict):
+        return _set_vorbis_tag(audio.tags, tag, value=value)
 
     raise NotImplementedError("audio type not supported")
+
+def get_picture(audio: FileType):
+    if not isinstance(audio, FileType):
+        raise TypeError("not mutagen audio object")
+
+    if audio.tags == None:
+        return
+    
+    if isinstance(audio.tags, id3.ID3):
+        return _get_id3_picture(audio.tags)
+    elif isinstance(audio.tags, flac.VCFLACDict):
+        return _get_flac_picture(audio)
+    elif isinstance(audio.tags, _vorbis.VCommentDict):
+        return _get_vorbis_picture(audio.tags)
+
+    raise NotImplementedError("audio type not supported")
+
+def _get_id3_picture(tags: id3.ID3):
+    data = _get_id3_tag(tags, 'picture')
+    if not isinstance(data, bytes):
+        return
+    file = io.BytesIO(data)
+    image = Image.open(file)
+    return image
+
+def _get_flac_picture(audio: flac.FLAC):
+    if len(audio.pictures) > 0:
+        data = audio.pictures[0].data
+        file = io.BytesIO(data)
+        image = Image.open(file)
+        return image
+
+def _get_vorbis_picture(tags: _vorbis.VCommentDict):
+    base64_data = _get_vorbis_tag(tags, 'picture')
+
+    if base64_data == None:
+        return
+    
+    picture_data = base64.b64decode(base64_data)
+    picture = Picture(picture_data)
+    
+    file = io.BytesIO(picture.data)
+    image = Image.open(file)
+    
+    return image
 
 def set_picture(audio: FileType, image: str | bytes | io.BytesIO | Image.Image):
     if not isinstance(audio, FileType):
@@ -451,6 +498,8 @@ def set_picture(audio: FileType, image: str | bytes | io.BytesIO | Image.Image):
         return _set_id3_picture(audio.tags, picture)
     elif isinstance(audio.tags, flac.VCFLACDict):
         return _set_flac_picture(audio, picture)
+    elif isinstance(audio.tags, _vorbis.VCommentDict):
+        return _set_vorbis_picture(audio.tags, picture)
 
     raise NotImplementedError("audio type not supported")
 
@@ -491,10 +540,8 @@ def _set_flac_picture(audio: FileType, image: Image.Image):
     
     data = picture.getvalue()
     mime = filetype.guess(data).mime
-    
-    
 
-    picture = flac.Picture()
+    picture = Picture()
     picture.data = data
     picture.type = id3.PictureType.COVER_FRONT
     picture.mime = mime
@@ -502,6 +549,31 @@ def _set_flac_picture(audio: FileType, image: Image.Image):
     picture.height = image.height
 
     audio.add_picture(picture)
+
+def _set_vorbis_picture(tags: _vorbis.VCommentDict, image: Image.Image):
+    if image == None:
+        return
+    
+    picture = io.BytesIO()
+    image.save(picture, format = 'JPEG')
+    
+    picture.seek(0)
+    
+    data = picture.getvalue()
+    mime = filetype.guess(data).mime
+
+    picture = Picture()
+    picture.data = data
+    picture.type = id3.PictureType.COVER_FRONT
+    picture.mime = mime
+    picture.width = image.width
+    picture.height = image.height
+    
+    picture_data = picture.write()
+    encoded_data = base64.b64encode(picture_data)
+    vcomment_value = encoded_data.decode("ascii")
+
+    tags["metadata_block_picture"] = [vcomment_value]
 
 def remove_tag(audio: FileType, tag: str):
     if not isinstance(audio, FileType):
@@ -512,13 +584,13 @@ def remove_tag(audio: FileType, tag: str):
 
     if isinstance(audio.tags, id3.ID3):
         return _remove_id3_tag(audio.tags, tag)
-    elif isinstance(audio.tags, flac.VCFLACDict):
-        return _remove_flac_tag(audio.tags, tag)
+    elif isinstance(audio.tags, _vorbis.VCommentDict):
+        return _remove_vorbis_tag(audio.tags, tag)
 
     raise NotImplementedError("audio type not supported")
 
 
-def get_tag_info(type: Literal["id3", "flac"], tag: str):
+def get_tag_info(type: Literal["id3", "vorbis"], tag: str):
     split = tag.split(":")
     desc = split[1] if len(split) > 1 else ""
 
@@ -550,7 +622,7 @@ def get_tag_info(type: Literal["id3", "flac"], tag: str):
     return result if result else tag
 
 
-def get_tag_id(type: Literal["id3", "flac"], tag: str):
+def get_tag_id(type: Literal["id3", "vorbis"], tag: str):
     id = get_tag_info(type, tag)
     if isinstance(id, dict):
         return id["id"]
@@ -567,7 +639,7 @@ def get_tag_names(tag: str) -> list[str]:
         
         result = ''
         
-        for type in ['id3', 'flac']:
+        for type in ['id3', "vorbis"]:
             tag_name = tag_info[type]
             
             if isinstance(tag_name, dict):
@@ -619,13 +691,14 @@ def _get_id3_tag(tags: id3.ID3, tag: str):
     
     if id.split(':')[0].upper() not in ID3_FRAMES:
         id = f'TXXX:{tag}'
+        
+    split = id.split(':')
+    id = split[0].upper()
+    desc = ':'.join(split[1::]) if len(split) > 1 else None
 
-    if id.split(':')[0].upper() in ID3_FRAMES:
-        values = []
-        for name in tags:
-            if name.lower() == id.lower():
-                values = [tags[name]]
-                break
+    if id in ID3_FRAMES:
+        name = id + ((':' + desc) if isinstance(desc, str) else '')
+        values = tags.getall(name)
         
         if len(values) > 0:
             value = values[0]
@@ -638,8 +711,8 @@ def _get_id3_tag(tags: id3.ID3, tag: str):
     return value
 
 
-def _get_flac_tag(tags: flac.VCFLACDict, tag: str):
-    id = get_tag_id("flac", tag)
+def _get_vorbis_tag(tags: flac.VCFLACDict, tag: str):
+    id = get_tag_id("vorbis", tag)
 
     return tags.get(id, [None])[0]
 
@@ -674,7 +747,8 @@ def _set_id3_tag(tags: id3.ID3, tag: str, value: str = None, **kwargs):
     desc = split[1] if len(split) > 1 else None
     
     if id not in ID3_FRAMES:
-        id = f"TXXX:{id}"
+        desc = id
+        id = f"TXXX"
 
     if "desc" in kwargs and desc != None:
         desc = f'{desc}:{kwargs["desc"]}'
@@ -693,8 +767,8 @@ def _set_id3_tag(tags: id3.ID3, tag: str, value: str = None, **kwargs):
     tags.add(tag_frame)
 
 
-def _set_flac_tag(tags: flac.VCFLACDict, tag: str, value: str):
-    id = get_tag_id("flac", tag)
+def _set_vorbis_tag(tags: flac.VCFLACDict, tag: str, value: str):
+    id = get_tag_id("vorbis", tag)
     
     if not isinstance(value, (list, tuple, dict, set, slice)):
         value = str(value)
@@ -710,7 +784,7 @@ def _remove_id3_tag(tags: id3.ID3, tag: str):
     tags.delall(id)
 
 
-def _remove_flac_tag(tags: flac.VCFLACDict, tag: str):
-    id = get_tag_id('flac', tag)
+def _remove_vorbis_tag(tags: flac.VCFLACDict, tag: str):
+    id = get_tag_id("vorbis", tag)
 
     del tags[id]

@@ -44,10 +44,15 @@ class AudioTags(dict):
             tags = [_tags.get_tag_name(key) for key in keys]
 
             for tag in tags:
+                if tag == 'picture':
+                    continue
+                
                 self.__setitem__(
                     tag,
                     _tags.get_tag(audio, tag),
                 )
+            
+            self.picture = _tags.get_picture(audio)
 
     def save(self, file: str = None):
         if file == None and self.filename != None:
