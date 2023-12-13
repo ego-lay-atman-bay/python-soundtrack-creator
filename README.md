@@ -115,7 +115,7 @@ python -m soundtrack create "config.json"
 
 `config.json` includes all the information needed to create the soundtrack. Here is the format it uses (in json5 syntax). Any duplicate keys here just mean that they are different types of values you can put in.
 
-```json
+```json5
 {
     "silence": { // add silence to start and / or end of track
         "start": 0.1,
@@ -175,7 +175,7 @@ The track json defines all the tracks in the soundtrack. These can either be def
 
 An example with external `track.json` files.
 
-```json
+```json5
 {
   "tracks": {
     "files": "folder/",
@@ -199,7 +199,7 @@ with the folder structure like this
 
 Alternatively, the info in the `track.json` files can be in the main `config.json` file.
 
-```json
+```json5
 {
   "tracks": {
     "files": {
@@ -231,7 +231,7 @@ With the file structure like this
 
 Each track needs some config to configure how the track should loop (whether it should loop), and it's metadata. Files specified in the `track.json` config files are also relative.
 
-```json
+```json5
 {
 	"track": {
 		"track": "track.wav", // this will not loop. It can be used to use special editing, or on a track that doesn't loop.
@@ -307,7 +307,7 @@ file structure
 
 `config.json`
 
-```json
+```json5
 {
     "silence": {
         "start": 0.1,
@@ -343,7 +343,7 @@ file structure
 ```
 
 `track 1/track.json`
-```json
+```json5
 {
   "track 1": {
     "track": {
@@ -355,7 +355,7 @@ file structure
 ```
 
 `track 2/track.json`
-```json
+```json5
 {
   "track 2": {
     "track": {
@@ -366,7 +366,7 @@ file structure
 ```
 
 `track 3/track.json`
-```json
+```json5
 {
   "track 3": {
     "track": [{
