@@ -253,10 +253,11 @@ class Soundtrack:
                 continue
 
             filename: str = os.path.basename(music.filename)
+            name = os.path.splitext(filename)[0]
 
             if self.title != None:
                 try:
-                    title = re.search(self.title, filename).group()
+                    title = re.search(self.title, name).group()
                 except:
                     title = self.title
                 logging.info(f"{title = }")
@@ -264,7 +265,7 @@ class Soundtrack:
 
             if self.track != None:
                 try:
-                    track = re.search(self.track, os.path.basename(filename)).group()
+                    track = re.search(self.track, name).group()
                 except:
                     track = self.track
 
