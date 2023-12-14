@@ -6,11 +6,12 @@ Despite the fact that this repo is called `python-soundtrack-creator`, the actua
 - [soundtrack-creator](#soundtrack-creator)
   - [Installation](#installation)
     - [ffmpeg](#ffmpeg)
-  - [Getting started](#getting-started)
+  - [Soundtrack tagging](#soundtrack-tagging)
+    - [Tag spreadsheet](#tag-spreadsheet)
   - [Creating soundtracks](#creating-soundtracks)
-  - [Main config](#main-config)
-  - [Track json](#track-json)
-  - [Example](#example)
+    - [Main config](#main-config)
+    - [Track json](#track-json)
+    - [Example](#example)
 
 
 ## Installation
@@ -63,13 +64,60 @@ brew install ffmpeg
 - #### Windows: 
 
 download ffmpeg binaries from this [gyan.dev](https://www.gyan.dev/ffmpeg/builds/)
-## Getting started
 
-Now you can run
+## Soundtrack tagging
+
+You can tag all the audio files in a folder for tagging a soundtrack.
+
 ```shell
 cd src
 python -m soundtrack tag -h
 ```
+```
+usage: python -m soundtrack tag [-h] input
+
+positional arguments:
+  input                 input soundtrack folder
+
+options:
+  -h, --help            show this help message and exit
+  --output OUTPUT, -o   Output folder to put the soundtrack in. If ommitted, it will modify     
+                        the original files.
+  --artist ARTIST, -ar  Artist or composer.
+  --title TITLE, -ti    Track title. This can be regex to get the title from the filename.      
+  --track TRACK, -tr    Track number. This can be regex to get the track from the filename.     
+  --band BAND, -b       Album artist / band
+  --album ALBUM, -al    Album title
+  --publisher PUBLISHER, -p
+                        Publisher
+  --genre [GENRE ...], -g
+                        Genre(s)
+  --disc DISC, -d       Disc number. This can be regex to get the disc from the filename.
+  --cover COVER, -c     Cover art image.
+  --clear               Clear metadata before writing
+  --spreadsheet SPREADSHEET, -s 
+                        Add a metadata spreadsheet. This csv will have a header, and it will
+                        match the first column then add the specified metadata tags.
+```
+
+All regex used grabs group 0, the default group (outside parenthesis). The regex will search the filename without the file extension.
+
+Example:
+
+```shell
+python -m soundtrack tag "folder" --clear --title "(?![0-9]+)(?<= - ).*" --track "[0-9]+(?= - )" --album "album" --band "Album Artist" --publisher "Publisher" --cover "artwork.jpg"
+```
+
+This will tag the following
+
+```csv
+filename,title,track,album,band,publisher
+01 - title 1.mp3,title 1,1,album,Album Artist,Publisher
+2 - title 2.flac,title 2,2,album,Album Artist,Publisher
+15 - title 15.ogg,title 15,15,album,Album Artist,Publisher
+```
+
+### Tag spreadsheet
 
 The spreadsheet is a csv file, formatted with the `,` separator, and each line is a different track. Values can be surrounded by spaces, the script trims spaces off before using the values.
 
@@ -81,18 +129,18 @@ track 1.mp3, artist 1, 1
 track 2    , artist 2, 2
 ```
 
-The first row matches the file 'track 1.mp3' and adds the tags `{'artist':'artist 1', 'disc':'1'}`
+The first row matches the file `track 1.mp3` and adds the tags `{'artist':'artist 1', 'disc':'1'}`
 
-The second row matches the file 'track 2.wav' and adds the tags `{'artist':'artist 2', 'disc':'2'}`
+The second row matches the file `track 2.wav` and adds the tags `{'artist':'artist 2', 'disc':'2'}`
 
 
 The first column matching is case insensitive, and if the column is `filename`, the extension may be omitted to match files of the same name, but different formats.
 
 
-You can also set the first column to be a tag, so you can match track names instead.
+You can also set the first column to be a tag, so you can match by title instead.
 
 ```csv
-title, composer, track
+title  , composer  , track
 title 1, composer 1, 1
 title 2, composer 2, 2
 ```
@@ -111,7 +159,7 @@ The main command to run is this
 python -m soundtrack create "config.json"
 ```
 
-## Main config
+### Main config
 
 `config.json` includes all the information needed to create the soundtrack. Here is the format it uses (in json5 syntax). Any duplicate keys here just mean that they are different types of values you can put in.
 
@@ -227,7 +275,7 @@ With the file structure like this
   - track.wav
 ```
 
-## Track json
+### Track json
 
 Each track needs some config to configure how the track should loop (whether it should loop), and it's metadata. Files specified in the `track.json` config files are also relative.
 
@@ -281,7 +329,7 @@ Each track needs some config to configure how the track should loop (whether it 
 
 Any amount of tracks can be put into a single `track.json` file, but all of the `track.json` files inside the `"files"` folder will be used.
 
-## Example
+### Example
 
 file structure
 ```
