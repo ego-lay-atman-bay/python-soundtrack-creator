@@ -10,7 +10,7 @@ from PIL import Image
 import csv
 
 
-from .audio_tags import AudioTags
+from audioman import AudioTags
 
 
 class Soundtrack:

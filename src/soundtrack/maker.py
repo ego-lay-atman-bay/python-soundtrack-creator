@@ -63,9 +63,10 @@ import json5
 from copy import deepcopy
 import csv
 
+from audioman import Audio
+from audioman.effect import effects
+
 from .format import format
-from .audio import Audio
-from .effect import effects
 
 
 def merge_dicts(from_, to):
