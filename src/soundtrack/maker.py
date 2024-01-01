@@ -331,7 +331,7 @@ class SoundtrackMaker:
             elif isinstance(config["track"][title]["track"], list):
                 audio = self.make_audio(config["track"][title]["track"][0], config["dir"])
                 for track in config["track"][title]["track"][1::]:
-                    audio = audio.merge(
+                    audio = audio.mix(
                         self.make_audio(
                             track, config["dir"],
                         )
