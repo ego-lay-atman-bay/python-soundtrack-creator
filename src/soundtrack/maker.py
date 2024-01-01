@@ -351,6 +351,7 @@ class SoundtrackMaker:
             tracks.append(audio)
             self.save_track(audio)
             audio.unload()
+            logging.debug(f'samples: {audio._samples}')
         
         self.audio += tracks
 
