@@ -3,5 +3,9 @@ mutagen==1.47.0
 numpy==1.26.2
 Pillow==10.1.0
 pydub==0.25.1
+audioop-lts # to fix pydub in python 3.13
 soundfile==0.12.1
-audioman
+git+https://github.com/ego-lay-atman-bay/audioman
+pathvalidate
+charset_normalizer
+json5

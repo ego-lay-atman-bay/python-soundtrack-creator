@@ -7,6 +7,7 @@ import numpy
 from .soundtrack import Soundtrack
 from .maker import SoundtrackMaker
 
+
 def setup_logger(level = logging.INFO):
     if isinstance(level, str):
         level = logging._nameToLevel.get(level.upper(), logging.INFO)
@@ -30,7 +31,6 @@ if __name__ == "__main__":
         dest = 'log_level',
         help = f'log level {{{", ".join(logging._nameToLevel.keys())}}}',
         default = logging.INFO,
-        
     )
     
     subparsers = arg_parser.add_subparsers(
@@ -132,6 +132,67 @@ if __name__ == "__main__":
         help = 'configuration json path',
     )
     
+    create.add_argument(
+        '--dry-run', '-d',
+        help = 'print filenames',
+        action = 'store_true',
+        dest = 'dry_run',
+    )
+    
+    create.add_argument(
+        '--tracks', '-t',
+        dest = 'tracks',
+        help = 'tracks to build',
+        nargs = '+',
+        type = str,
+    )
+    
+    create.add_argument(
+        '--album', '-a',
+        dest = 'albums',
+        help = 'albums to build',
+        nargs = '+',
+        type = str,
+    )
+    
+    # dump
+    dump = subparsers.add_parser(
+        'dump',
+        help = 'dump metadata from files in folder',
+    )
+    
+    dump.add_argument(
+        'folder',
+        help = 'folder to grab metadata from',
+    )
+    
+    dump.add_argument(
+        'output',
+        help = 'output csv file',
+        default = 'metadata.csv',
+    )
+    
+    dump.add_argument(
+        '-ho', '--header-order',
+        dest = 'order',
+        nargs = '+',
+        help = 'header order, such as "title" "artist"',
+    )
+    
+    dump.add_argument(
+        '-e', '--exclude-unknown',
+        dest = 'exclude',
+        action = 'store_false',
+        help = "exclude tag that aren't in '--header-order'",
+    )
+    
+    dump.add_argument(
+        '-a', '--align',
+        dest = 'aligned',
+        action = 'store_true',
+        help = "align output csv",
+    )
+    
     if len(sys.argv[1:]) < 1:
         arg_parser.print_help()
         sys.exit()
@@ -141,24 +202,47 @@ if __name__ == "__main__":
     setup_logger(args.log_level)
 
     if args.command == 'tag':
-        soundtrack = Soundtrack(
-            args.input,
-            output=args.output,
-            album=args.album,
-            artist=args.artist,
-            title=args.title,
-            track=args.track,
-            band=args.band,
-            publisher=args.publisher,
-            genre=args.genre,
-            disc=args.disc,
-            cover_art=args.cover,
-            spreadsheet=args.spreadsheet,
-            clear=args.clear,
+        try:
+            soundtrack = Soundtrack(
+                args.input,
+                output=args.output,
+                album=args.album,
+                artist=args.artist,
+                title=args.title,
+                track=args.track,
+                band=args.band,
+                publisher=args.publisher,
+                genre=args.genre,
+                disc=args.disc,
+                cover_art=args.cover,
+                spreadsheet=args.spreadsheet,
+                clear=args.clear,
+            )
+
+            soundtrack.write_tags()
+            soundtrack.save()
+        except:
+            logging.exception('Error during soundtrack tagging')
+    elif args.command == 'create':
+        print(args)
+        
+        try:
+            maker = SoundtrackMaker(args.input, {
+                'title': args.tracks,
+                'album': args.albums,
+            }, args.dry_run)
+            maker.create_soundtrack()
+        except:
+            logging.exception('Error during soundtrack creation')
+    
+    elif args.command == 'dump':
+        from .dump import dump_metadata
+        
+        dump_metadata(
+            args.folder,
+            args.output,
+            args.order,
+            args.exclude,
+            align_csv = args.aligned,
         )
 
-        soundtrack.write_tags()
-        soundtrack.save()
-    elif args.command == 'create':
-        maker = SoundtrackMaker(args.input)
-        maker.create_soundtrack()
