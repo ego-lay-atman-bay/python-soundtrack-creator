@@ -21,7 +21,7 @@ def dump_metadata(
         for filename in files:
             tags = audioman.AudioTags(os.path.join(root, filename))
             columns.update(tags.keys())
-            table.append(dict(tags))
+            table.append({key: ';'.join(value) if isinstance(value, list) else value for key, value in tags.items()})
     
     header = list(columns)
     if order:
