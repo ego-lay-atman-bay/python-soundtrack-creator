@@ -28,6 +28,12 @@ Install the dependencies
 pip install -r requirements.txt
 ```
 
+> [!WARNING]
+> If you are using python 3.13, you have to install `audioop-lts`
+> ```shell
+> pip install audioop-lts
+> ```
+
 ### ffmpeg
 
 You will also need ffmpeg, which can be installed with your favorite package manager.
